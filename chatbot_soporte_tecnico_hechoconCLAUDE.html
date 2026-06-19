@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bot de Soporte Técnico Nivel 1 — TechCorp</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0f1117;
+    --surface:   #1a1d27;
+    --surface2:  #22263a;
+    --border:    #2e3250;
+    --accent:    #4f8ef7;
+    --accent2:   #7c3aed;
+    --success:   #22c55e;
+    --warning:   #f59e0b;
+    --danger:    #ef4444;
+    --text:      #e8eaf0;
+    --muted:     #7b82a0;
+    --bot-bubble:#1e2236;
+    --user-bubble:#1e3a5f;
+    --font:      'Inter', sans-serif;
+    --mono:      'JetBrains Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+  }
+  .bot-avatar {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .bot-info h1 { font-size: 15px; font-weight: 600; }
+  .bot-info p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .status-dot {
+    width: 8px; height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* Estado del proceso */
+  .estado-bar {
+    width: 100%;
+    max-width: 700px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .estado-badge {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: var(--mono);
+    transition: all .3s;
+  }
+
+  /* ── CHAT ── */
+  #chat {
+    width: 100%;
+    max-width: 700px;
+    height: 480px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+  }
+  #chat::-webkit-scrollbar { width: 5px; }
+  #chat::-webkit-scrollbar-track { background: transparent; }
+  #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .msg {
+    display: flex;
+    gap: 10px;
+    animation: fadeUp .25s ease both;
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+  .msg.bot  { align-self: flex-start; max-width: 82%; }
+  .msg.user { align-self: flex-end;   max-width: 82%; flex-direction: row-reverse; }
+
+  .msg-avatar {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .msg.bot  .msg-avatar { background: linear-gradient(135deg,var(--accent),var(--accent2)); }
+  .msg.user .msg-avatar { background: var(--surface2); border: 1px solid var(--border); }
+
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .msg.bot  .bubble { background: var(--bot-bubble);  border: 1px solid var(--border); border-top-left-radius: 4px; }
+  .msg.user .bubble { background: var(--user-bubble); border: 1px solid #2a4a7f;        border-top-right-radius: 4px; }
+
+  .bubble .tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    font-family: var(--mono);
+    font-weight: 500;
+  }
+  .tag.info    { background:#1e3a5f; color:var(--accent); }
+  .tag.error   { background:#3b1010; color:var(--danger); }
+  .tag.success { background:#0f2e1a; color:var(--success); }
+  .tag.warning { background:#2e1f00; color:var(--warning); }
+
+  /* Opciones de botones */
+  .opciones {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-top: 10px;
+  }
+  .btn-opcion {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: all .2s;
+    font-family: var(--font);
+  }
+  .btn-opcion:hover { border-color: var(--accent); color: var(--accent); background: #1a2a45; }
+
+  /* Typing indicator */
+  .typing { display: flex; gap: 4px; align-items: center; padding: 12px 14px; }
+  .typing span {
+    width: 7px; height: 7px;
+    background: var(--muted);
+    border-radius: 50%;
+    animation: bounce .9s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: .15s; }
+  .typing span:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+  /* ── INPUT AREA ── */
+  .input-area {
+    width: 100%;
+    max-width: 700px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 16px 16px;
+    padding: 14px 18px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  #input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-family: var(--font);
+    outline: none;
+    transition: border-color .2s;
+  }
+  #input:focus { border-color: var(--accent); }
+  #input::placeholder { color: var(--muted); }
+
+  #btn-send {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    color: #fff;
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity .2s;
+  }
+  #btn-send:hover { opacity: .85; }
+
+  /* Panel lateral de BD */
+  .db-panel {
+    width: 100%;
+    max-width: 700px;
+    margin-top: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .db-header {
+    padding: 12px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .db-body {
+    padding: 14px 18px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .db-body .key   { color: var(--accent); }
+  .db-body .val   { color: var(--success); }
+  .db-body .state { color: var(--warning); }
+
+  /* Reset */
+  #btn-reset {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-left: auto;
+    font-family: var(--font);
+    transition: all .2s;
+  }
+  #btn-reset:hover { border-color: var(--danger); color: var(--danger); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="bot-avatar">🤖</div>
+  <div class="bot-info">
+    <h1>TechBot — Soporte Técnico Nivel 1</h1>
+    <p><span class="status-dot"></span>En línea · Organización Empresarial TUP · UTN</p>
+  </div>
+  <button id="btn-reset" onclick="reiniciar()">↺ Reiniciar</button>
+</header>
+
+<!-- BARRA DE ESTADO (Máquina de Estados) -->
+<div class="estado-bar">
+  ESTADO ACTUAL:&nbsp;<span class="estado-badge" id="estado-label">INICIO</span>
+  &nbsp;·&nbsp; intentos: <span id="intentos-label">0</span>/3
+  &nbsp;·&nbsp; ticket: <span id="ticket-label">—</span>
+</div>
+
+<!-- CHAT -->
+<div id="chat"></div>
+
+<!-- INPUT -->
+<div class="input-area">
+  <input id="input" type="text" placeholder="Escribí tu mensaje o usá los botones de arriba..." disabled
+         onkeydown="if(event.key==='Enter') enviar()"/>
+  <button id="btn-send" onclick="enviar()">➤</button>
+</div>
+
+<!-- PANEL BD SIMULADA -->
+<div class="db-panel">
+  <div class="db-header">🗄️ BASE DE DATOS SIMULADA — Estado en tiempo real</div>
+  <div class="db-body" id="db-view">Iniciando...</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  BASE DE DATOS SIMULADA
+// ═══════════════════════════════════════════════
+const BD = {
+  usuarios: [
+    { legajo: "1001", nombre: "Ana García",    sector: "Administración" },
+    { legajo: "1002", nombre: "Carlos Ruiz",   sector: "Sistemas" },
+    { legajo: "1003", nombre: "Laura Méndez",  sector: "Contabilidad" },
+    { legajo: "1004", nombre: "Martín López",  sector: "RRHH" },
+  ],
+  categorias: [
+    { id: 1, nombre: "PC no enciende",         solucion: "Verificá que el cable de alimentación esté bien conectado. Si el LED de power no enciende, revisá el tomacorriente con otro dispositivo." },
+    { id: 2, nombre: "Sin acceso a internet",  solucion: "Reiniciá el router (desenchufar 30 seg). Verificá que el cable de red o WiFi esté activo. Ejecutá: ipconfig /flushdns en CMD." },
+    { id: 3, nombre: "Olvidé mi contraseña",   solucion: "Tu contraseña fue restablecida a 'Temp1234!'. Ingresá con ella y cambiala en los próximos 5 minutos desde Configuración → Seguridad." },
+    { id: 4, nombre: "Impresora no imprime",   solucion: "Verificá que la impresora esté encendida y conectada. Eliminá los trabajos pendientes desde Panel de Control → Dispositivos e impresoras." },
+    { id: 5, nombre: "Error en sistema ERP",   solucion: null }, // Sin solución → escala
+    { id: 6, nombre: "Otro problema",          solucion: null }, // Sin solución → escala
+  ],
+  tickets: []
+};
+
+// ═══════════════════════════════════════════════
+//  MÁQUINA DE ESTADOS
+// ═══════════════════════════════════════════════
+let estado = {
+  paso: "INICIO",          // INICIO | IDENTIFICACION | CLASIFICACION | SOLUCION_OFRECIDA | ESCALADO | FIN
+  intentos: 0,
+  usuario: null,
+  categoria: null,
+  ticketId: null,
+};
+
+// ═══════════════════════════════════════════════
+//  UTILIDADES
+// ═══════════════════════════════════════════════
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+
+function scrollBottom() { chat.scrollTop = chat.scrollHeight; }
+
+function actualizarUI() {
+  document.getElementById("estado-label").textContent = estado.paso;
+  document.getElementById("intentos-label").textContent = estado.intentos;
+  document.getElementById("ticket-label").textContent = estado.ticketId || "—";
+
+  const t = BD.tickets[BD.tickets.length - 1];
+  document.getElementById("db-view").innerHTML = `
+<span class="key">usuarios[]</span> → ${BD.usuarios.length} registros cargados<br>
+<span class="key">categorias[]</span> → ${BD.categorias.length} problemas en BD<br>
+<span class="key">tickets[]</span> → ${BD.tickets.length} ticket(s) generado(s)<br>
+<br>
+<span class="key">sesion_actual</span> {<br>
+&nbsp;&nbsp;<span class="key">estado</span>: <span class="state">"${estado.paso}"</span><br>
+&nbsp;&nbsp;<span class="key">intentos</span>: <span class="val">${estado.intentos}</span><br>
+&nbsp;&nbsp;<span class="key">usuario</span>: <span class="val">${estado.usuario ? `"${estado.usuario.nombre} (${estado.usuario.legajo})"` : "null"}</span><br>
+&nbsp;&nbsp;<span class="key">categoria</span>: <span class="val">${estado.categoria ? `"${estado.categoria.nombre}"` : "null"}</span><br>
+&nbsp;&nbsp;<span class="key">ticketId</span>: <span class="val">${estado.ticketId ? `"${estado.ticketId}"` : "null"}</span><br>
+}${t ? `<br><br><span class="key">ultimo_ticket</span> {<br>
+&nbsp;&nbsp;<span class="key">id</span>: <span class="val">"${t.id}"</span><br>
+&nbsp;&nbsp;<span class="key">estado</span>: <span class="state">"${t.estado}"</span><br>
+&nbsp;&nbsp;<span class="key">categoria</span>: <span class="val">"${t.categoria}"</span><br>
+&nbsp;&nbsp;<span class="key">fecha</span>: <span class="val">"${t.fecha}"</span><br>
+}` : ""}`;
+}
+
+function addTyping() {
+  const el = document.createElement("div");
+  el.className = "msg bot"; el.id = "typing-indicator";
+  el.innerHTML = `<div class="msg-avatar">🤖</div><div class="bubble bot-bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  chat.appendChild(el); scrollBottom();
+}
+function removeTyping() {
+  const el = document.getElementById("typing-indicator");
+  if (el) el.remove();
+}
+
+function msgBot(html, delay=600) {
+  return new Promise(res => {
+    addTyping();
+    setTimeout(() => {
+      removeTyping();
+      const el = document.createElement("div");
+      el.className = "msg bot";
+      el.innerHTML = `<div class="msg-avatar">🤖</div><div class="bubble">${html}</div>`;
+      chat.appendChild(el); scrollBottom(); actualizarUI(); res();
+    }, delay);
+  });
+}
+
+function msgUser(texto) {
+  const el = document.createElement("div");
+  el.className = "msg user";
+  el.innerHTML = `<div class="bubble">${texto}</div><div class="msg-avatar">👤</div>`;
+  chat.appendChild(el); scrollBottom();
+}
+
+function addOpciones(opciones) {
+  const last = chat.querySelector(".msg.bot:last-child .bubble");
+  if (!last) return;
+  const div = document.createElement("div");
+  div.className = "opciones"; div.id = "opciones-activas";
+  opciones.forEach(op => {
+    const b = document.createElement("button");
+    b.className = "btn-opcion";
+    b.textContent = op.label;
+    b.onclick = () => { limpiarOpciones(); procesarInput(op.value); };
+    div.appendChild(b);
+  });
+  last.appendChild(div);
+}
+
+function limpiarOpciones() {
+  const el = document.getElementById("opciones-activas");
+  if (el) el.remove();
+}
+
+function generarTicketId() {
+  return "TKT-" + Date.now().toString().slice(-6);
+}
+
+// ═══════════════════════════════════════════════
+//  LÓGICA DEL BOT (Máquina de Estados)
+// ═══════════════════════════════════════════════
+async function procesarInput(texto) {
+  const txt = texto.trim();
+  if (!txt) return;
+
+  input.disabled = true;
+  msgUser(txt);
+
+  // ── ESTADO: IDENTIFICACION ──────────────────
+  if (estado.paso === "IDENTIFICACION") {
+    const user = BD.usuarios.find(u => u.legajo === txt || u.nombre.toLowerCase() === txt.toLowerCase());
+
+    if (user) {
+      // Gateway GW1: ¿Usuario registrado? → SÍ
+      estado.usuario = user;
+      estado.intentos = 0;
+      estado.paso = "CLASIFICACION";
+      await msgBot(`<span class="tag success">✓ USUARIO VALIDADO</span><br>Bienvenido/a, <strong>${user.nombre}</strong> (${user.sector}).<br><br>¿Cuál es tu problema hoy?`);
+      addOpciones(BD.categorias.map(c => ({ label: c.nombre, value: String(c.id) })));
+    } else {
+      // Gateway GW1: ¿Usuario registrado? → NO (camino infeliz)
+      estado.intentos++;
+      if (estado.intentos >= 3) {
+        estado.paso = "FIN";
+        await msgBot(`<span class="tag error">✗ ACCESO BLOQUEADO</span><br>Superaste los 3 intentos permitidos.<br>Contactá a RRHH al interno <strong>2200</strong> o enviá un mail a <strong>soporte@techcorp.com</strong>`);
+        input.disabled = true;
+      } else {
+        await msgBot(`<span class="tag error">✗ USUARIO NO ENCONTRADO</span><br>No encontré tu legajo o nombre en el sistema. Intentá de nuevo.<br><small style="color:var(--muted)">Intento ${estado.intentos}/3 · Legajos válidos: 1001, 1002, 1003, 1004</small>`);
+        input.disabled = false;
+        input.focus();
+      }
+    }
+    actualizarUI(); return;
+  }
+
+  // ── ESTADO: CLASIFICACION ───────────────────
+  if (estado.paso === "CLASIFICACION") {
+    const catId = parseInt(txt);
+    const cat = BD.categorias.find(c => c.id === catId);
+    if (!cat) {
+      await msgBot(`<span class="tag error">✗ OPCIÓN INVÁLIDA</span><br>Por favor elegí una opción de las que aparecen arriba.`);
+      addOpciones(BD.categorias.map(c => ({ label: c.nombre, value: String(c.id) })));
+      actualizarUI(); return;
+    }
+    estado.categoria = cat;
+
+    // Gateway GW2: ¿Solución conocida?
+    if (cat.solucion) {
+      // SÍ → ofrezco solución automática
+      estado.paso = "SOLUCION_OFRECIDA";
+      await msgBot(`<span class="tag info">⚙ CONSULTANDO BASE DE DATOS...</span><br><br><strong>Problema:</strong> ${cat.nombre}<br><br><strong>Solución automática:</strong><br>${cat.solucion}`, 900);
+      await msgBot(`¿Lograste resolver el problema con estos pasos?`);
+      addOpciones([{ label: "✅ Sí, resuelto", value: "resuelto" }, { label: "❌ No, sigue el problema", value: "no_resuelto" }]);
+    } else {
+      // NO → escalar
+      await escalar();
+    }
+    actualizarUI(); return;
+  }
+
+  // ── ESTADO: SOLUCION_OFRECIDA ───────────────
+  // Gateway GW3: ¿Resuelto?
+  if (estado.paso === "SOLUCION_OFRECIDA") {
+    if (txt === "resuelto") {
+      // SÍ → registrar y cerrar
+      const id = generarTicketId();
+      estado.ticketId = id;
+      estado.paso = "FIN";
+      BD.tickets.push({ id, estado: "RESUELTO", categoria: estado.categoria.nombre, usuario: estado.usuario.legajo, fecha: new Date().toLocaleString("es-AR") });
+      await msgBot(`<span class="tag success">✓ CASO RESUELTO</span><br>¡Excelente! El ticket <strong>${id}</strong> fue registrado como <strong>RESUELTO</strong>.<br><br>¿Hay algo más en lo que pueda ayudarte?`);
+      await msgBot(`<span class="tag info">ℹ ENCUESTA</span><br>¿Qué tan útil fue la solución?`);
+      addOpciones([{ label: "⭐ Muy útil", value: "encuesta" }, { label: "👍 Útil", value: "encuesta" }, { label: "👎 Poco útil", value: "encuesta" }]);
+    } else {
+      // NO → escalar
+      await escalar();
+    }
+    actualizarUI(); return;
+  }
+
+  // ── ESTADO: ENCUESTA / FIN ──────────────────
+  if (estado.paso === "FIN") {
+    await msgBot(`<span class="tag success">✓ GRACIAS</span><br>Gracias por tu respuesta. El proceso ha finalizado. Hasta la próxima.`);
+    input.disabled = true;
+    actualizarUI(); return;
+  }
+
+  // Cualquier input inesperado
+  await msgBot(`<span class="tag warning">⚠ ERROR DE ESTADO</span><br>No entendí esa respuesta. Por favor usá los botones disponibles.`);
+  actualizarUI();
+}
+
+async function escalar() {
+  const id = generarTicketId();
+  estado.ticketId = id;
+  estado.paso = "ESCALADO";
+  BD.tickets.push({ id, estado: "ESCALADO", categoria: estado.categoria.nombre, usuario: estado.usuario?.legajo || "N/A", fecha: new Date().toLocaleString("es-AR") });
+  await msgBot(`<span class="tag warning">⚠ ESCALANDO A TÉCNICO</span><br>No encontré una solución automática para este problema.<br><br>Se generó el ticket <strong>${id}</strong> y fue asignado a un técnico de nivel 2.<br><br>📧 Recibirás un correo en <strong>${estado.usuario?.nombre?.split(" ")[0].toLowerCase() || "tu"}@techcorp.com</strong> con el seguimiento.`, 1000);
+  estado.paso = "FIN";
+  input.disabled = true;
+}
+
+// ═══════════════════════════════════════════════
+//  INICIO DEL BOT
+// ═══════════════════════════════════════════════
+async function iniciar() {
+  estado = { paso: "INICIO", intentos: 0, usuario: null, categoria: null, ticketId: null };
+  actualizarUI();
+  await msgBot(`<span class="tag info">▶ PROCESO INICIADO</span><br>Hola, soy <strong>TechBot</strong>, el asistente de soporte técnico de TechCorp.<br><br>Para comenzar, ingresá tu <strong>número de legajo</strong> o tu <strong>nombre completo</strong>.`, 800);
+  estado.paso = "IDENTIFICACION";
+  actualizarUI();
+  input.disabled = false;
+  input.focus();
+}
+
+function enviar() {
+  const txt = input.value.trim();
+  if (!txt || input.disabled) return;
+  input.value = "";
+  limpiarOpciones();
+  procesarInput(txt);
+}
+
+function reiniciar() {
+  chat.innerHTML = "";
+  BD.tickets = [];
+  iniciar();
+}
+
+// Arranca
+iniciar();
+</script>
+</body>
+</html>
