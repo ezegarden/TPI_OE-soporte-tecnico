@@ -1,0 +1,8 @@
+CÓMO ABRIR EL DIAGRAMA
+======================
+ 
+1. Entrá a https://draw.io
+2. Clic en "Open existing diagram"
+3. Seleccioná el archivo "DIAGRAMA BPNM.drawio"
+4. Listo, el diagrama se abre solo.
+5. También pueden verlo en la imagen, pero no pude hacer que se vea claro,para verlo mejor ábranlo en draw.io
